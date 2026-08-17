@@ -1,0 +1,57 @@
+// Tiny editorial page-progress marker, bottom-right corner only.
+// Fixed, non-interactive, well clear of footer content, social icons and
+// the mobile menu overlay (1100) — sits below it so an open menu covers it.
+.wrapper {
+  position: fixed;
+  right: 36px;
+  bottom: 36px;
+  height: 70px;
+  z-index: 1050;
+  pointer-events: none;
+}
+
+.track {
+  position: relative;
+  height: 100%;
+  width: 1px;
+  background: var(--line);
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  width: 1px;
+  height: 100%;
+  transform: scaleY(0);
+  transform-origin: top;
+  background: #ff4d2e;
+  will-change: transform;
+}
+
+.dot {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ff4d2e;
+  transform: translate(-50%, -50%);
+  will-change: top;
+}
+
+@media (max-width: 1024px) {
+  .wrapper {
+    right: 24px;
+    bottom: 24px;
+    height: 60px;
+  }
+}
+
+@media (max-width: 640px) {
+  .wrapper {
+    right: 16px;
+    bottom: 20px;
+    height: 50px;
+  }
+}
