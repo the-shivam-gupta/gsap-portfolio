@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Space_Mono } from "next/font/google";
+import { Poppins, Space_Grotesk, Space_Mono } from "next/font/google";
 import { site } from "@/data/site";
 import "./globals.scss";
 import { CustomCursor } from "@/components/CustomCursor";
@@ -18,6 +18,13 @@ const spaceGrotesk = Space_Grotesk({
 const spaceMono = Space_Mono({
   variable: "--next-font-mono",
   weight: ["400", "700"],
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const poppins = Poppins({
+  variable: "--next-font-numeral",
+  weight: ["700", "800"],
   subsets: ["latin"],
   display: "swap",
 });
@@ -73,7 +80,10 @@ const personJsonLd = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${spaceMono.variable}`}>
+    <html
+      lang="en"
+      className={`${spaceGrotesk.variable} ${spaceMono.variable} ${poppins.variable}`}
+    >
       <body>
         <LoaderProvider>
           <CustomCursor />
