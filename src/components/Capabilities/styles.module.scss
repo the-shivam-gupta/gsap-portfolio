@@ -43,14 +43,16 @@
   position: relative;
 }
 
-/* A quiet warm glow behind the whole journey, echoing the accent color
-   without fighting the rest of the page's near-black palette. */
+/* A soft, low-key backdrop for the whole journey — without this, the
+   card's translucency + blur has nothing but flat black behind it, so
+   it reads as a plain solid card no matter how the alpha is tuned. This
+   gives the blur some gentle tonal variation to actually pick up. */
 .journey::before {
   content: "";
   position: absolute;
   inset: -4rem -4rem auto -4rem;
-  height: 40rem;
-  background: radial-gradient(ellipse 60% 60% at 50% 0%, var(--accent-soft), transparent 70%);
+  height: 44rem;
+  background: radial-gradient(ellipse 65% 55% at 50% 0%, var(--bg-3), transparent 72%);
   z-index: 0;
   pointer-events: none;
 }
@@ -65,16 +67,18 @@
 }
 
 /* The connector only exists as the scroll-drawn stroke — it grows as the
-   user scrolls instead of sitting fully visible on the page. pathLength
-   normalises the stroke length to 100, so dasharray/dashoffset of 100
-   hide it entirely until the scroll scrub draws it to zero. */
+   user scrolls instead of sitting fully visible on the page. JS sets
+   stroke-dasharray/stroke-dashoffset to the path's real on-screen length
+   (see the scroll-driven-draw effect) the moment it's measured, so
+   nothing shows before that; this is just the fallback for the first
+   paint, before JS has run. */
 .pathDraw {
   fill: none;
   stroke: var(--ink);
   stroke-width: 2px;
   stroke-linecap: round;
-  stroke-dasharray: 100;
-  stroke-dashoffset: 100;
+  stroke-linejoin: round;
+  opacity: 0;
 }
 
 .list {
@@ -92,35 +96,47 @@
 }
 
 /* A solid, glowing marker centred exactly on the card edge where the
-   flight path meets it — never over the card's content. */
+   flight path meets it — never over the card's content. Hidden by
+   default: JS fades each one in only once the drawn line has actually
+   reached it (see the scroll-driven-draw effect), so nothing appears
+   before the user scrolls there. */
 .node {
   position: absolute;
-  width: 0.95rem;
-  height: 0.95rem;
+  width: 0.8rem;
+  height: 0.8rem;
   border-radius: 50%;
   transform: translate(-50%, -50%);
   background: var(--accent);
   z-index: 2;
-  box-shadow: 0 0 0 6px var(--accent-soft), 0 0 1.25rem 0.15rem var(--accent-line);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  /* A tight glow, not a wide halo — a big soft ring around a small dot
+     reads as a separate floating orb near the card rather than a
+     marker that's actually attached to its edge. */
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0.5rem 0.05rem var(--accent-line);
 }
 
+/* margin-left is derived from the leftover space (100% - card width) at
+   whatever the actual rendered width is, scaled by --pos (0-1, set inline
+   per card). That leftover-based calc is what keeps the sweep filling the
+   full row width at any viewport — a plain percentage margin drifts short
+   of the right edge once the card's rem cap kicks in on wide screens. */
 .cardWrap {
   position: relative;
   z-index: 1;
-  width: min(24rem, 34%);
+  --card-w: min(34rem, 46%);
+  width: var(--card-w);
+  margin-left: calc((100% - var(--card-w)) * var(--pos, 0));
+}
+
+.cardWrapOpen {
+  z-index: 40;
 }
 
 .card {
   position: relative;
-  background:
-    radial-gradient(
-      130% 115% at 10% 96%,
-      rgba(196, 113, 78, 0.2),
-      rgba(196, 113, 78, 0.06) 42%,
-      transparent 62%
-    ),
-    radial-gradient(90% 90% at 100% 0%, rgba(255, 77, 46, 0.07), transparent 55%),
-    var(--bg-2);
+  background: #0d0d0cb6;
+  backdrop-filter: blur(10px);
   border: 1px solid var(--line);
   border-radius: 1.5rem;
   padding: clamp(2rem, 4vw, 2.5rem);
@@ -137,27 +153,54 @@
   opacity: 0.45;
 }
 
+/* Fully step aside for its own detail panel — the panel takes over this
+   exact slot, so nothing of the source card should peek out behind or
+   around its edges. */
+.cardHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* A slot-machine reel: a fixed-height window (one line tall, matching
+   its own font-size) clipping a vertical strip of every digit up to
+   this card's own number. The strip (.cardIndexTrack) slides upward on
+   scroll — see the entrance effect in index.tsx — so lower cards
+   visibly roll 01 → 02 → 03 ... before settling on their own number. */
 .cardIndex {
+  position: relative;
   display: block;
-  font-family: var(--font-numeral);
-  font-weight: 800;
+  height: 1em;
   font-size: clamp(2.25rem, 4.5vw, 3.5rem);
   line-height: 1;
-  letter-spacing: 0;
-  color: var(--accent);
+  overflow: hidden;
   margin-bottom: 1.5rem;
 }
 
+.cardIndexTrack {
+  display: flex;
+  flex-direction: column;
+}
+
+.cardIndexDigit {
+  display: block;
+  height: 1em;
+  font-family: var(--font-numeral);
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--accent);
+  line-height: 1;
+}
+
 .cardTitle {
-  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  font-size: clamp(1.4rem, 2.4vw, 1.75rem);
   font-weight: 500;
   letter-spacing: -0.02em;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.9rem;
 }
 
 .cardText {
   color: var(--ink-soft);
-  font-size: var(--fs-sm);
+  font-size: clamp(1rem, 1.3vw, 1.0625rem);
   line-height: var(--lh-body);
   margin-bottom: 2rem;
 }
@@ -205,22 +248,26 @@
 /*  Detail panel — expands wide, on top of its own card                */
 /* ------------------------------------------------------------------ */
 
-/* Sits absolutely over the card (a little wider on every side) and is
-   elevated above the rest of the list. Open/close is a scale + opacity
-   tween driven entirely by GSAP — see the effect in index.tsx — so
-   there's no height to measure and nothing else needs to reflow. */
+/* Matches the source card's full width (which fades out via .cardHidden
+   while this is open) so it reads as that exact card growing taller in
+   place, not a narrower panel floating over it. min-height pushes it
+   past the card's own height so the longer expanded copy has real room
+   to breathe; it can still grow further if the content needs even more.
+   Open/close is a scale + opacity tween driven entirely by GSAP — see
+   the effect in index.tsx — so there's no height to measure up front. */
 .detailPanel {
   position: absolute;
-  top: -1rem;
-  left: -1.25rem;
-  right: -1.25rem;
+  inset: 0 0 auto 0;
+  min-height: 200%;
   z-index: 30;
+  display: flex;
+  flex-direction: column;
   background:
-    radial-gradient(130% 115% at 10% 96%, rgba(196, 113, 78, 0.2), transparent 60%),
+    radial-gradient(55% 30% at -8% 106%, rgba(196, 113, 78, 0.16), transparent 55%),
     var(--bg-3);
   border: 1px solid var(--line-strong);
   border-radius: 1.5rem;
-  padding: clamp(2rem, 4vw, 2.5rem);
+  padding: clamp(2.5rem, 5vw, 3.5rem);
   box-shadow: 0 2rem 4rem -1.5rem rgba(0, 0, 0, 0.6);
   opacity: 0;
   transform: scale(0.95);
@@ -230,10 +277,10 @@
 
 .detailClose {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
-  width: 2rem;
-  height: 2rem;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 2.25rem;
+  height: 2.25rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -253,14 +300,14 @@
 .detailHead {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 0.9rem;
+  margin-bottom: 1.75rem;
 }
 
 .detailIndex {
   font-family: var(--font-numeral);
   font-weight: 800;
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(2.25rem, 4.5vw, 3.25rem);
   line-height: 1;
   letter-spacing: 0;
   color: var(--accent);
@@ -270,8 +317,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 50%;
   background: var(--bg-2);
   border: 1px solid var(--line);
@@ -279,34 +326,38 @@
 }
 
 .detailTitle {
-  font-size: clamp(1.15rem, 2vw, 1.4rem);
+  font-size: clamp(1.6rem, 2.8vw, 2.1rem);
   font-weight: 500;
   letter-spacing: -0.02em;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
   padding-right: 2rem;
 }
 
 .detailText {
   color: var(--ink-soft);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-body);
-  margin-bottom: 1.25rem;
+  font-size: clamp(1.0625rem, 1.5vw, 1.1875rem);
+  line-height: 1.7;
+  margin-bottom: 2.5rem;
 }
 
+/* Pushed to the bottom of the taller panel with margin-top: auto, so the
+   extra height reads as generous breathing room between the copy and
+   the tags, not dead space left over below the content. */
 .detailKeywords {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.6rem;
+  margin-top: auto;
 }
 
 .detailKeyword {
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: var(--track-label);
   color: var(--ink);
   border: 1px solid var(--line);
-  padding: 0.35rem 0.6rem;
+  padding: 0.5rem 0.85rem;
   border-radius: 999px;
 }
 
@@ -316,7 +367,7 @@
 
 @media (max-width: 1023px) {
   .cardWrap {
-    width: min(20rem, 38%);
+    --card-w: min(28rem, 52%);
   }
 }
 
@@ -340,8 +391,7 @@
   }
 
   .detailPanel {
-    left: -0.5rem;
-    right: -0.5rem;
+    min-height: 160%;
     padding: 1.5rem;
   }
 }

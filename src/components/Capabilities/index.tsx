@@ -27,12 +27,9 @@ const ICONS: Record<CapabilityIcon, typeof Code2> = {
 
 const GOLDEN_RATIO = 0.6180339887;
 
-// Deterministic pseudo-random horizontal placement (golden-ratio sequence)
-// so the cards scatter across the section instead of locking to fixed
-// left/right rails. Stable across server and client renders.
 function cardPosition(i: number) {
   const t = (i * GOLDEN_RATIO) % 1;
-  return 0.04 + 0.56 * t;
+  return 0.03 + 0.94 * t;
 }
 
 interface Point {
@@ -40,20 +37,46 @@ interface Point {
   y: number;
 }
 
-// Build a single continuous flight-path curve through the measured anchor
-// points. Each segment is a cubic bezier whose tangents leave and enter
-// the anchor points horizontally, so the curve weaves between the
-// alternating cards in smooth, arcing sweeps rather than hugging a rail.
 function buildArcPath(points: Point[]) {
-  if (points.length === 0) return "";
-  let d = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 1; i < points.length; i++) {
-    const prev = points[i - 1];
-    const curr = points[i];
-    const dx = curr.x - prev.x;
-    d += ` C ${prev.x + dx * 0.34} ${prev.y}, ${curr.x - dx * 0.34} ${curr.y}, ${curr.x} ${curr.y}`;
+  if (points.length === 0) return { d: "", prefixes: [] as string[] };
+  if (points.length === 1) {
+    const only = `M ${points[0].x} ${points[0].y}`;
+    return { d: only, prefixes: [only] };
   }
-  return d;
+
+  let d = `M ${points[0].x} ${points[0].y}`;
+  const prefixes = [d];
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] ?? points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] ?? p2;
+
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+    prefixes.push(d);
+  }
+  return { d, prefixes };
+}
+
+function computeNodeThresholds(prefixes: string[]) {
+  if (typeof document === "undefined" || prefixes.length === 0) return [];
+  const scratch = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  const lengths = prefixes.map((d) => {
+    scratch.setAttribute("d", d);
+    return scratch.getTotalLength();
+  });
+  const total = lengths[lengths.length - 1] || 1;
+  return lengths.map((l) => l / total);
+}
+
+interface JourneyBox {
+  width: number;
+  height: number;
 }
 
 export function Capabilities() {
@@ -61,16 +84,20 @@ export function Capabilities() {
   const journeyRef = useRef<HTMLDivElement>(null);
   const drawRef = useRef<SVGPathElement>(null);
   const cardWrapRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const cardIndexTrackRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const cardBodyRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const panelRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const nodeRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const [openIndex, setOpenIndex] = useState<string | null>(null);
-  const [path, setPath] = useState<{ d: string; points: Point[] }>({ d: "", points: [] });
+  const [path, setPath] = useState<{ d: string; points: Point[]; thresholds: number[] }>({
+    d: "",
+    points: [],
+    thresholds: [],
+  });
+  const [box, setBox] = useState<JourneyBox>({ width: 0, height: 0 });
   const positions = useMemo(() => capabilities.map((_, i) => cardPosition(i)), []);
 
-  // Measure each card's real position so the connector line and its dot
-  // marker land exactly where the curve meets the card edge — instead of
-  // guessing at fixed percentages that drift once row heights vary. Cards
-  // are scattered pseudo-randomly, so the curve meets each one at the
-  // centre of its top edge and the dot is centred exactly on the border.
   const measure = useCallback(() => {
     const journey = journeyRef.current;
     if (!journey) return;
@@ -84,18 +111,17 @@ export function Capabilities() {
       if (!wrap) return;
       const r = wrap.getBoundingClientRect();
       points.push({
-        x: ((r.left + r.width / 2 - jRect.left) / jRect.width) * 100,
-        y: ((r.top - jRect.top) / jRect.height) * 100,
+        x: r.left + r.width / 2 - jRect.left,
+        y: r.top - jRect.top,
       });
     });
 
-    setPath({ d: buildArcPath(points), points });
+    const { d, prefixes } = buildArcPath(points);
+    setBox({ width: jRect.width, height: jRect.height });
+    setPath({ d, points, thresholds: computeNodeThresholds(prefixes) });
   }, []);
 
   useEffect(() => {
-    // Deferred a frame: the initial measurement has to run after this
-    // effect's own render has committed and the browser has laid the
-    // cards out, not synchronously inside the effect body.
     const raf = requestAnimationFrame(measure);
 
     const journey = journeyRef.current;
@@ -112,34 +138,109 @@ export function Capabilities() {
     };
   }, [measure]);
 
-  // Scroll-driven draw. The path's length is normalised to 100 via
-  // pathLength (the SVG is stretched non-uniformly, so raw getTotalLength
-  // in user units doesn't match the rendered length), and CSS hides it by
-  // default with an offset of 100. Scrolling then draws it from the start
-  // point, like water flowing along the path — no line before the scroll.
   useEffect(() => {
     const root = rootRef.current;
     const draw = drawRef.current;
     if (!root || !draw || !path.d) return;
 
+    const length = draw.getTotalLength();
+    gsap.set(draw, { opacity: 1, strokeDasharray: length, strokeDashoffset: length });
+
     const ctx = gsap.context(() => {
       const list = root.querySelector<HTMLElement>(`.${styles.list}`);
       if (!list) return;
+
+      const firstCard = cardWrapRefs.current[capabilities[0].index];
+      const lastCard = cardWrapRefs.current[capabilities[capabilities.length - 1].index];
+      if (!firstCard || !lastCard) return;
+
+      gsap.set(
+        capabilities.map((cap) => nodeRefs.current[cap.index]).filter(Boolean),
+        { opacity: 0 },
+      );
 
       gsap.to(draw, {
         strokeDashoffset: 0,
         ease: "none",
         scrollTrigger: {
-          trigger: list,
-          start: "top 90%",
-          end: "bottom 50%",
-          scrub: 0.4,
+          trigger: firstCard,
+          start: "top 85%",
+          endTrigger: lastCard,
+          end: "top 55%",
+          scrub: true,
+          onUpdate: (self) => {
+            capabilities.forEach((cap, i) => {
+              const node = nodeRefs.current[cap.index];
+              if (!node) return;
+              const threshold = path.thresholds[i] ?? i / Math.max(capabilities.length - 1, 1);
+              node.style.opacity = self.progress >= threshold ? "1" : "0";
+            });
+          },
         },
       });
     }, root);
 
     return () => ctx.revert();
-  }, [path.d]);
+  }, [path.d, path.thresholds]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || prefersReducedMotion()) return;
+
+    const ctx = gsap.context(() => {
+      capabilities.forEach((cap, i) => {
+        const card = cardRefs.current[cap.index];
+        if (!card) return;
+
+        const scrollTrigger = {
+          trigger: card,
+          start: "top 88%",
+          toggleActions: "play none none reverse",
+        };
+
+        gsap.from(card, {
+          y: 48,
+          scale: 0.96,
+          duration: 1,
+          ease: "power3.out",
+          scrollTrigger: { ...scrollTrigger },
+        });
+
+        const track = cardIndexTrackRefs.current[cap.index];
+        const target = i + 1;
+        if (track && target > 1) {
+          gsap.fromTo(
+            track,
+            { opacity: 0 },
+            {
+              opacity: 1,
+              y: `-${target - 1}em`,
+              duration: Math.min(1.7, 0.45 + 0.16 * target),
+              ease: "power2.inOut",
+              scrollTrigger: { ...scrollTrigger },
+            },
+          );
+        }
+
+        // Title, body copy and the footer row fade + rise in together,
+        // as their own group — separate from both the card and number.
+        const body = cardBodyRefs.current[cap.index];
+        if (body) {
+          gsap.from(Array.from(body.children), {
+            opacity: 0,
+            y: 24,
+            duration: 0.9,
+            ease: "power3.out",
+            stagger: 0.08,
+            delay: 0.1,
+            scrollTrigger: { ...scrollTrigger },
+          });
+        }
+      });
+    }, root);
+
+    return () => ctx.revert();
+  }, []);
 
   // Detail overlay open/close — a simple scale + opacity tween anchored
   // in place over the card, so nothing needs its height measured.
@@ -214,17 +315,15 @@ export function Capabilities() {
       </div>
 
       <div ref={journeyRef} className={styles.journey}>
-        {path.d && (
+        {path.d && box.width > 0 && box.height > 0 && (
           <svg
             className={styles.path}
-            viewBox={`0 0 100 100`}
-            preserveAspectRatio="none"
+            viewBox={`0 0 ${box.width} ${box.height}`}
             aria-hidden="true"
           >
             <path
               ref={drawRef}
               d={path.d}
-              pathLength={100}
               className={styles.pathDraw}
               vectorEffect="non-scaling-stroke"
             />
@@ -236,6 +335,7 @@ export function Capabilities() {
             const Icon = ICONS[cap.icon];
             const isOpen = openIndex === cap.index;
             const dimmed = openIndex !== null && !isOpen;
+            const hidden = isOpen; // the panel takes over this card's slot entirely
             const panelId = `capability-panel-${cap.index}`;
             const point = path.points[i];
 
@@ -243,8 +343,11 @@ export function Capabilities() {
               <li key={cap.index} className={styles.row}>
                 {point && (
                   <span
+                    ref={(el) => {
+                      nodeRefs.current[cap.index] = el;
+                    }}
                     className={styles.node}
-                    style={{ left: `${point.x}%`, top: `${point.y}%` }}
+                    style={{ left: `${point.x}px`, top: `${point.y}px` }}
                     aria-hidden="true"
                   />
                 )}
@@ -253,28 +356,57 @@ export function Capabilities() {
                   ref={(el) => {
                     cardWrapRefs.current[cap.index] = el;
                   }}
-                  className={styles.cardWrap}
-                  style={{ marginLeft: `${positions[i] * 100}%` }}
+                  className={cx(styles.cardWrap, isOpen && styles.cardWrapOpen)}
+                  style={{ "--pos": positions[i] } as React.CSSProperties}
                 >
-                  <div className={cx(styles.card, dimmed && styles.cardDimmed)} data-reveal>
-                    <span className={styles.cardIndex}>{cap.index}</span>
-
-                    <h3 className={styles.cardTitle}>{cap.title}</h3>
-                    <p className={styles.cardText}>{cap.detail}</p>
-
-                    <div className={styles.cardFoot}>
-                      <span className={styles.handle}>{cap.handle}</span>
-
-                      <button
-                        type="button"
-                        className={cx(styles.readMore, isOpen && styles.readMoreOpen)}
-                        data-cursor="READ"
-                        aria-expanded={isOpen}
-                        aria-controls={panelId}
-                        onClick={() => setOpenIndex(isOpen ? null : cap.index)}
+                  <div
+                    ref={(el) => {
+                      cardRefs.current[cap.index] = el;
+                    }}
+                    className={cx(
+                      styles.card,
+                      dimmed && styles.cardDimmed,
+                      hidden && styles.cardHidden,
+                    )}
+                  >
+                    <span className={styles.cardIndex} aria-label={cap.index}>
+                      <span
+                        ref={(el) => {
+                          cardIndexTrackRefs.current[cap.index] = el;
+                        }}
+                        className={styles.cardIndexTrack}
+                        aria-hidden="true"
                       >
-                        {isOpen ? "Close" : "Read more"}
-                      </button>
+                        {Array.from({ length: i + 1 }, (_, n) => (
+                          <span key={n} className={styles.cardIndexDigit}>
+                            {String(n + 1).padStart(2, "0")}
+                          </span>
+                        ))}
+                      </span>
+                    </span>
+
+                    <div
+                      ref={(el) => {
+                        cardBodyRefs.current[cap.index] = el;
+                      }}
+                    >
+                      <h3 className={styles.cardTitle}>{cap.title}</h3>
+                      <p className={styles.cardText}>{cap.detail}</p>
+
+                      <div className={styles.cardFoot}>
+                        <span className={styles.handle}>{cap.handle}</span>
+
+                        <button
+                          type="button"
+                          className={cx(styles.readMore, isOpen && styles.readMoreOpen)}
+                          data-cursor="READ"
+                          aria-expanded={isOpen}
+                          aria-controls={panelId}
+                          onClick={() => setOpenIndex(isOpen ? null : cap.index)}
+                        >
+                          {isOpen ? "Close" : "Read more"}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -302,7 +434,7 @@ export function Capabilities() {
                     </div>
 
                     <h4 className={styles.detailTitle}>{cap.title}</h4>
-                    <p className={styles.detailText}>{cap.detail}</p>
+                    <p className={styles.detailText}>{cap.expanded}</p>
 
                     <ul className={styles.detailKeywords}>
                       {cap.keywords.map((k) => (
