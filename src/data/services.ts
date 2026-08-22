@@ -1,44 +1,52 @@
 export interface Service {
   index: string;
-  title: string;
+  /** Rendered as stacked lines, deliberately — not auto-wrapped. */
+  title: string[];
   description: string;
-  deliverables: string[];
+  technologies: string[];
 }
 
 export const services: Service[] = [
   {
     index: "01",
-    title: "Websites",
+    title: ["Web", "Development"],
     description:
-      "Editorial websites and portfolios designed and built to feel like a product. Fast, accessible and impossible to confuse with a template.",
-    deliverables: ["Marketing sites", "Portfolios", "Editorial platforms"],
+      "Editorial websites and marketing sites built with performance, scalability and interaction in mind.",
+    technologies: ["React", "Next.js", "TypeScript", "Tailwind"],
   },
   {
     index: "02",
-    title: "Web Applications",
+    title: ["Web", "Applications"],
     description:
-      "Complex product interfaces — dashboards, tools, platforms — engineered with care for state, performance and the people using them.",
-    deliverables: ["Product UI", "Dashboards", "Internal tools"],
+      "Complex product interfaces — dashboards, tools and platforms — engineered for state, speed and the people using them.",
+    technologies: ["React", "Node.js", "PostgreSQL", "Redis"],
   },
   {
     index: "03",
-    title: "Creative Development",
+    title: ["UI / UX", "Engineering"],
     description:
-      "The ambitious stuff: scroll choreography, immersive interactions and motion systems that make a brand unforgettable.",
-    deliverables: ["Scroll experiences", "Interactive stories", "Motion systems"],
+      "Interfaces designed and built as one process, from Figma to production, with typography and spacing systemised.",
+    technologies: ["Figma", "Design Systems", "Framer"],
   },
   {
     index: "04",
-    title: "CMS Development",
+    title: ["Performance", "& Optimization"],
     description:
-      "Headless content architecture that keeps editors empowered and developers happy — structured models, previews and zero design drift.",
-    deliverables: ["Sanity / Payload", "Content models", "Editor workflows"],
+      "Audits, refactors and image pipelines that lift Core Web Vitals and keep motion-heavy sites smooth.",
+    technologies: ["Lighthouse", "Core Web Vitals", "Bundle Size"],
   },
   {
     index: "05",
-    title: "Performance Optimization",
+    title: ["API / Backend", "Integration"],
     description:
-      "Audits, refactors and image pipelines that lift Core Web Vitals and keep animation-heavy sites smooth on modest hardware.",
-    deliverables: ["Core Web Vitals", "Bundle hygiene", "Image pipelines"],
+      "Third-party APIs, payments and headless CMS platforms wired up cleanly, with data modelled to last.",
+    technologies: ["REST", "GraphQL", "Stripe", "Sanity"],
+  },
+  {
+    index: "06",
+    title: ["Interactive", "Experiences"],
+    description:
+      "Scroll choreography and motion systems that turn a brand's site into something worth staying on.",
+    technologies: ["GSAP", "ScrollTrigger", "WebGL"],
   },
 ];

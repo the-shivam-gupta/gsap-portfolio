@@ -218,30 +218,62 @@
   margin-right: auto;
 }
 
-/* Pill button — light cream, fully rounded, sentence case. */
+/* Editorial text link — no pill, no fill. A hairline underline and a
+   small arrow that nudges right on interaction; the accent is reserved
+   for the hover/open/focus state, never a resting fill. */
 .readMore {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-family: var(--font-body);
-  font-size: 0.8125rem;
-  font-weight: 600;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
   line-height: 1;
-  letter-spacing: 0;
-  text-transform: none;
-  color: #1a1711;
-  background: #edeae3;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: none;
   border: none;
-  border-radius: 24px;
-  padding: 0.625rem 1.25rem;
+  border-bottom: 1px solid var(--line-strong);
+  border-radius: 0;
+  padding: 0.3rem 0.1rem;
   cursor: pointer;
-  transition: background 0.35s ease, color 0.35s ease, transform 0.35s var(--ease-out);
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+
+/* Expands the tap target well past the visible glyph (roughly to the
+   44px accessibility minimum) without changing the button's visual
+   size or the surrounding layout rhythm. */
+.readMoreHit {
+  position: absolute;
+  inset: -0.85rem -0.5rem;
+}
+
+.readMoreLabel {
+  display: inline-block;
+}
+
+.readMoreArrow {
+  transition: transform 0.25s var(--ease-out);
 }
 
 .readMore:hover,
+.readMore:focus-visible,
 .readMoreOpen {
-  background: #dfdbd0;
-  color: #0f0d09;
+  color: var(--accent);
+  border-color: var(--accent-line);
+}
+
+.readMore:hover .readMoreArrow,
+.readMore:focus-visible .readMoreArrow,
+.readMoreOpen .readMoreArrow {
+  transform: translateX(5px);
+}
+
+.readMore:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
 }
 
 /* ------------------------------------------------------------------ */

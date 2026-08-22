@@ -8,6 +8,7 @@ import {
   Zap,
   Database,
   Gauge,
+  ArrowRight,
   X,
 } from "lucide-react";
 import { gsap } from "@/animations/register";
@@ -404,7 +405,16 @@ export function Capabilities() {
                           aria-controls={panelId}
                           onClick={() => setOpenIndex(isOpen ? null : cap.index)}
                         >
-                          {isOpen ? "Close" : "Read more"}
+                          <span aria-hidden="true" className={styles.readMoreHit} />
+                          <span className={styles.readMoreLabel}>
+                            {isOpen ? "Close" : "Read more"}
+                          </span>
+                          <ArrowRight
+                            className={styles.readMoreArrow}
+                            size={14}
+                            strokeWidth={1.75}
+                            aria-hidden="true"
+                          />
                         </button>
                       </div>
                     </div>

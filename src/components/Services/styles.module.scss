@@ -1,29 +1,35 @@
+/* ------------------------------------------------------------------ */
+/*  Services — a pinned horizontal editorial gallery, not a card grid. */
+/*  No shadows, no glass, no rounded containers: panels are separated   */
+/*  by hairlines only, like columns in one continuous printed canvas.   */
+/* ------------------------------------------------------------------ */
+
 .services {
-  padding-inline: var(--pad-x);
-  padding-block: var(--section-space);
+  position: relative;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Head — eyebrow + statement sit as an asymmetric pair above the      */
-/*  main heading, instead of a single centered block.                   */
-/* ------------------------------------------------------------------ */
-
-.head {
+/* The pin target (see index.tsx). Deliberately carries none of the
+   site's standard --section-space padding — its own top/bottom padding
+   *is* the section's rhythm, since this is meant to read as a distinct
+   full-viewport interlude rather than another block in the normal flow. */
+.stage {
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 34rem;
   display: flex;
   flex-direction: column;
-  gap: clamp(1.5rem, 4vh, 2.5rem);
-  margin-bottom: clamp(4rem, 11vh, 8rem);
+  background: var(--bg);
+  padding-top: calc(var(--nav-h) + clamp(1.5rem, 4vh, 2.5rem));
+  padding-bottom: clamp(1.5rem, 4vh, 2.5rem);
 }
 
-.headTop {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: clamp(1.5rem, 6vw, 5rem);
-}
-
-.eyebrow {
+.head {
   flex-shrink: 0;
+  padding-inline: var(--pad-x);
+}
+
+.label {
   font-family: var(--font-mono);
   font-size: var(--fs-label);
   text-transform: uppercase;
@@ -34,276 +40,281 @@
   gap: 1rem;
 }
 
-.eyebrow::before {
+.label::before {
   content: "";
   width: 2.5rem;
   height: 1px;
   background: var(--accent);
 }
 
-/* The supporting statement — deliberately not centred under the
-   heading, and deliberately not the same size as body copy either.
-   It sits as its own quiet aside, right-aligned against the eyebrow. */
-.statement {
-  max-width: 32ch;
-  font-size: var(--fs-sm);
-  line-height: var(--lh-body);
-  color: var(--ink-muted);
-  text-align: right;
-}
-
-.title {
-  font-size: var(--fs-xl);
-  font-weight: 500;
-  line-height: 0.92;
-  letter-spacing: var(--track-tight);
-}
-
 /* ------------------------------------------------------------------ */
-/*  Field — one continuous typographic list, no cards, no split stage.  */
+/*  Horizontal canvas                                                   */
 /* ------------------------------------------------------------------ */
 
-.field {
-  border-top: 1px solid var(--line);
-}
-
-.row {
-  border-bottom: 1px solid var(--line);
-}
-
-.rowButton {
-  position: relative;
-  width: 100%;
-  display: flex;
-  align-items: flex-start;
-  gap: clamp(1rem, 2.5vw, 2rem);
-  padding-block: clamp(2rem, 5vh, 3.25rem);
-  text-align: left;
-  cursor: pointer;
-}
-
-/* Small and carefully placed — top-aligned with the title's cap-height
-   rather than centred against its full line-height, so it reads like a
-   footnote marker, not a competing number. */
-.rowIndex {
-  flex-shrink: 0;
-  padding-top: 0.5em;
-  width: clamp(2.25rem, 3vw, 3rem);
-  font-family: var(--font-mono);
-  font-size: var(--fs-label);
-  color: var(--ink-faint);
-  transition: color 0.5s ease;
-}
-
-/* The "subtle visual detail" — a thin accent tick that grows in next to
-   the title on hover/active, instead of a glow, a shadow, or an icon. */
-.rowTick {
-  flex-shrink: 0;
-  align-self: stretch;
-  width: 2px;
-  margin-top: 0.3em;
-  background: var(--accent);
-  opacity: 0;
-  transform: scaleY(0);
-  transform-origin: top;
-  transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out);
-}
-
-.rowTitle {
+/* The clipping window — full-bleed, no --pad-x, so the panel row reads
+   as one continuous canvas rather than an inset content column. */
+.viewport {
   flex: 1;
-  min-width: 0;
-  font-size: clamp(2.1rem, 5vw, 4.25rem);
-  font-weight: 500;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-  text-wrap: balance;
-  transition: color 0.5s ease;
-}
-
-.rowArrow {
-  flex-shrink: 0;
-  align-self: flex-start;
-  margin-top: 0.55em;
-  font-size: clamp(1.1rem, 1.6vw, 1.5rem);
-  color: var(--ink-faint);
-  opacity: 0;
-  transform: translateX(-0.5rem);
-  transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out), color 0.5s ease;
-}
-
-/* Hover — fine pointers only, so touch never sticks half-hovered and a
-   tap drives the interaction instead. */
-@media (hover: hover) and (pointer: fine) {
-  .rowButton:hover .rowIndex {
-    color: var(--accent);
-  }
-
-  .rowButton:hover .rowTick {
-    opacity: 1;
-    transform: scaleY(1);
-  }
-
-  .rowButton:hover .rowTitle {
-    color: var(--accent);
-  }
-
-  .rowButton:hover .rowArrow {
-    opacity: 1;
-    transform: none;
-    color: var(--accent);
-  }
-}
-
-/* Active — the same treatment as hover, held in place so the current
-   selection stays obvious once the pointer moves away or on touch. */
-.rowButtonActive .rowIndex {
-  color: var(--accent);
-}
-
-.rowButtonActive .rowTick {
-  opacity: 1;
-  transform: scaleY(1);
-}
-
-.rowButtonActive .rowTitle {
-  color: var(--ink);
-}
-
-.rowButtonActive .rowArrow {
-  opacity: 1;
-  transform: none;
-  color: var(--accent);
-}
-
-/* Touch — the whole row is the tap target; a faint idle arrow signals
-   that without needing a hover state. */
-@media (hover: none) and (pointer: coarse) {
-  .rowArrow {
-    opacity: 0.35;
-  }
-
-  .rowButtonActive .rowArrow {
-    opacity: 1;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/*  Content — expands in place beneath its own row. Height-driven      */
-/*  open/close (GSAP, see index.tsx) — the same mechanism as the FAQ.  */
-/* ------------------------------------------------------------------ */
-
-.content {
-  height: 0;
-  opacity: 0;
+  min-height: 0;
+  display: flex;
   overflow: hidden;
 }
 
-/* Indented to align under the title, not the index — echoes the
-   band's own column rhythm instead of starting a new one. */
-.contentInner {
-  padding-left: calc(clamp(2.25rem, 3vw, 3rem) + clamp(1rem, 2.5vw, 2rem));
-  padding-bottom: clamp(2rem, 5vh, 3rem);
+.track {
+  display: flex;
+  align-items: stretch;
+}
+
+/* No card shell: no background, no radius, no shadow. Panels are just
+   separated by a single hairline — the "columns in a canvas" read.
+   Top-anchored, not vertically centred: descriptions wrap to different
+   line counts across panels, and centring each panel's content as its
+   own independent block let that difference shift the number/title/
+   accent-line up or down by several pixels panel to panel — same code,
+   genuinely misaligned baselines, not a missing-element bug. Anchoring
+   everything to the same top offset keeps that whole header group
+   pinned to one shared baseline regardless of how long the copy below
+   it runs. */
+.panel {
+  flex: 0 0 auto;
+  width: clamp(20rem, 34vw, 32rem);
   display: flex;
   flex-direction: column;
-  gap: clamp(1.25rem, 3vh, 1.75rem);
+  justify-content: flex-start;
+  padding-top: clamp(4rem, 11vh, 6.5rem);
+  padding-bottom: clamp(3rem, 8vh, 5rem);
+  padding-inline: clamp(1.75rem, 3vw, 2.75rem);
+  border-right: 1px solid var(--line);
 }
 
-.description {
-  max-width: 46ch;
-  font-size: clamp(1rem, 1.3vw, 1.0625rem);
+.panel:last-child {
+  border-right: none;
+}
+
+.panel:first-child {
+  padding-left: var(--pad-x);
+}
+
+.panel:last-child {
+  padding-right: var(--pad-x);
+}
+
+/* A large, elegant outline numeral — filled solid only once this is the
+   scroll-active panel. No accent color here: the accent stays reserved
+   for the small tick beneath the title. */
+.panelNumber {
+  display: block;
+  font-family: var(--font-numeral);
+  font-weight: 800;
+  font-size: clamp(3.5rem, 7vw, 6.5rem);
+  line-height: 1;
+  letter-spacing: 0;
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--ink-faint);
+  margin-bottom: clamp(1.5rem, 4vh, 2.5rem);
+  transition: color 0.6s ease, -webkit-text-stroke-color 0.6s ease;
+}
+
+.panelTitle {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: clamp(1.25rem, 3vh, 2rem);
+}
+
+.titleLine {
+  font-size: clamp(1.65rem, 3.6vw, 2.85rem);
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  transition: color 0.6s ease;
+}
+
+.accentLine {
+  display: block;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 3px;
+  min-height: 3px;
+  background: var(--accent);
+  margin-bottom: clamp(1.5rem, 4vh, 2.25rem);
+}
+
+.panelDesc {
+  max-width: 26ch;
+  font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
   line-height: var(--lh-body);
-  color: var(--ink-soft);
+  color: var(--ink-muted);
+  margin-bottom: clamp(1.5rem, 4vh, 2.25rem);
+  transition: color 0.6s ease;
 }
 
-/* Plain, spaced words with a thin divider between them — deliberately
-   not pills or tag "chips", so nothing reads as a box. */
-.tags {
+/* Plain spaced words — deliberately not pills or bordered chips. */
+.tech {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem;
+  gap: 0.6rem 1.5rem;
 }
 
-.tag {
+.techItem {
   font-family: var(--font-mono);
   font-size: var(--fs-label);
   text-transform: uppercase;
   letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+  transition: color 0.6s ease;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Active panel — brighter typography, no scaling, no glow.            */
+/* ------------------------------------------------------------------ */
+
+.panelActive .panelNumber {
+  color: var(--ink);
+  -webkit-text-stroke-color: var(--ink);
+}
+
+.panelActive .titleLine {
+  color: var(--ink);
+}
+
+.panelActive .panelDesc {
+  color: var(--ink-soft);
+}
+
+.panelActive .techItem {
   color: var(--ink-muted);
-  padding-left: 1rem;
-  border-left: 1px solid var(--line-strong);
-}
-
-.tag:first-child {
-  padding-left: 0;
-  border-left: none;
 }
 
 /* ------------------------------------------------------------------ */
-/*  Responsive                                                         */
+/*  Bottom progress indicator — thin line + current/total, accent fill. */
 /* ------------------------------------------------------------------ */
 
-@media (max-width: 1023px) {
-  .headTop {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1.25rem;
+.progress {
+  flex-shrink: 0;
+  padding-inline: var(--pad-x);
+  padding-top: clamp(1.5rem, 4vh, 2.5rem);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.progressIndex {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.progressTotal {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.progressTrack {
+  position: relative;
+  flex: 1;
+  max-width: 16rem;
+  height: 1px;
+  background: var(--line);
+}
+
+.progressFill {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  will-change: transform;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Stacked fallback — mobile, and reduced motion at any width.        */
+/*  No pin, no horizontal transform: a plain vertical editorial list.  */
+/* ------------------------------------------------------------------ */
+
+@mixin stacked-layout {
+  .stage {
+    height: auto;
+    min-height: 0;
+    padding-top: calc(var(--nav-h) + clamp(2rem, 8vh, 3rem));
+    padding-bottom: clamp(2rem, 8vh, 3rem);
   }
 
-  .statement {
-    text-align: left;
-    max-width: 42ch;
+  .viewport {
+    flex: none;
+    overflow: visible;
+  }
+
+  .track {
+    flex-direction: column;
+    width: auto !important;
+    transform: none !important;
+  }
+
+  .panel {
+    width: 100% !important;
+    min-height: 70vh;
+    justify-content: center;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    padding-inline: var(--pad-x) !important;
+    padding-block: clamp(3rem, 10vh, 4rem);
+  }
+
+  .panel:last-child {
+    border-bottom: none;
+  }
+
+  /* There's no meaningful "currently centred" panel once this is a
+     plain scrolling list, so every panel reads at full contrast rather
+     than all but one sitting permanently dimmed. */
+  .panelNumber {
+    color: var(--ink);
+    -webkit-text-stroke-color: var(--ink);
+  }
+
+  .titleLine {
+    color: var(--ink);
+  }
+
+  .panelDesc {
+    color: var(--ink-soft);
+  }
+
+  .techItem {
+    color: var(--ink-muted);
+  }
+
+  .progress {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .panel {
+    width: clamp(18rem, 50vw, 24rem);
+  }
+
+  .panelNumber {
+    font-size: clamp(3rem, 9vw, 5rem);
   }
 }
 
 @media (max-width: 767px) {
-  .rowButton {
-    align-items: center;
-    gap: 1rem;
-    padding-block: 1.5rem;
-  }
-
-  .rowIndex {
-    padding-top: 0;
-    width: 1.75rem;
-  }
-
-  .rowTick {
-    display: none;
-  }
-
-  .rowTitle {
-    font-size: clamp(1.5rem, 7.5vw, 2.1rem);
-    line-height: 1.15;
-  }
-
-  .rowArrow {
-    margin-top: 0;
-    font-size: 1.1rem;
-  }
-
-  .contentInner {
-    padding-left: 0;
-    padding-bottom: 1.5rem;
-  }
-
-  .description {
-    max-width: none;
-  }
+  @include stacked-layout;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Reduced motion                                                     */
-/* ------------------------------------------------------------------ */
-
 @media (prefers-reduced-motion: reduce) {
-  .rowIndex,
-  .rowTick,
-  .rowTitle,
-  .rowArrow,
-  .content {
+  @include stacked-layout;
+
+  .panelNumber,
+  .titleLine,
+  .panelDesc,
+  .techItem {
     transition: none;
   }
 }
